@@ -4,10 +4,7 @@ An implementation of the Lin-Kernighan TSP algorithm.
 from __future__ import annotations
 from typing import Callable
 
-import time
 import operator
-
-from multiprocessing import Process, Queue
 
 from utils import find_random_tour, tour_cost
 from utils import Matrix, Tour, Edge
@@ -230,12 +227,18 @@ def order_edges(edges: list[Edge]) -> Tour | None:
     return seen.edges
 
 
-def build_tour(tour: Tour, X: TabuList, Y: TabuList) -> Tour | None:
+def build_tour(
+    tour: Tour,
+    removed_edges: TabuList,
+    added_edges: TabuList,
+) -> Tour | None:
     """
-    .
+    Attempt to build a new tour based on `tour` and ...
     """
     old_edges = edges_of_tour(tour)
-    new_edges = [edge for edge in old_edges if edge not in X] + Y.edges
+    new_edges = [
+        edge for edge in old_edges if edge not in removed_edges
+    ] + added_edges.edges
 
     edges = order_edges(new_edges)
     if edges is None:
@@ -253,19 +256,19 @@ def kopt_move(
     neighbour_list: list[tuple[int, int]],
     cost: Callable[[Edge], int],
 ) -> tuple[Tour, int]:
-    """Perform a single k-opt move, returning the resulting tour and gain."""
+    """
+    Performs a single k-opt move on `base_tour` from initial tabu edges `x_1` and `y_1`
+    """
     n_cities = len(base_tour)
     best_tour = base_tour
     current_gain = cost(x_1) - cost(y_1)
     best_gain = 0
 
-    current_tour = base_tour
-
     i = 1
     k = i
     y_k_final = (x_1[1], x_1[0])
 
-    city_1 = x_1[0]
+    first_city = x_1[0]
 
     x_prev = x_1
     y_prev = y_1
@@ -295,7 +298,7 @@ def kopt_move(
         #
         for potential_city in neighbour_list[city_k]:
             potential_x_i = (city_k, potential_city)
-            potential_y_final = (potential_city, city_1)
+            potential_y_final = (potential_city, first_city)
             potential_g_final = cost(potential_x_i) - cost(potential_y_final)
 
             potential_tour = build_tour(
@@ -342,14 +345,14 @@ def kopt_move(
             # check `y_i` not in `tour`
             if potential_city in neighbour_list[city_l]:
                 continue
-            elif potential_city == city_1:
+            elif potential_city == first_city:
                 continue
 
             potential_y_i = (city_l, potential_city)
             potential_gain = cost(x_i) - cost(potential_y_i)
 
             #
-            # Step 4(c) - X, Y disjoint
+            # Step 4(c) - ensure X, Y are disjoint
             #
             if potential_y_i in X or potential_y_i in Y:
                 continue
@@ -379,13 +382,15 @@ def kopt_move(
 def lin_kernighan(
     initial_tour: Tour,
     dist_matrix: Matrix,
-    result_queue: Queue | None,
 ) -> Tour:
     """
     .
     """
 
     def cost(edge: Edge, dist_matrix: Matrix = dist_matrix) -> int:
+        """
+        Helper function to return the cost of `edge` in `dist_matrix`
+        """
         return dist_matrix[edge[0]][edge[1]]
 
     # Step 1 - start with an initial tour
@@ -394,9 +399,6 @@ def lin_kernighan(
     n_cities = len(initial_tour)
     candidate_list = build_candidate_lists(dist_matrix)
     seen_tours: set[Tour] = set()
-
-    # add the initial tour in case we don't find an improvement in time
-    result_queue.put((best_tour, best_weight))
 
     improved_tour = True
     duplicate_tour = False
@@ -450,53 +452,29 @@ def lin_kernighan(
                         if tour_tuple in seen_tours:
                             duplicate_tour = True
                             break
-                        else:
-                            seen_tours.add(tour_tuple)
+
+                        # memoise the resulting tour
+                        seen_tours.add(tour_tuple)
 
                         # record improving moves
                         if gain > 0:
                             best_tour = new_tour
                             best_weight -= gain
 
-                            result_queue.put((best_tour, best_weight))
-
                             improved_tour = True
                             made_kopt_move = True
                             neighbour_list = build_neighbour_list(best_tour)
-                            break
-                        else:
-                            # try another pair of starting cities
-                            break
+
+                        # why?
+                        break
 
     return best_tour, best_weight
 
 
-def lk_wrapper(initial_tour: Tour, dist_matrix: Matrix) -> tuple[Tour, int]:
-    """
-    A wrapper around `lin_kernighan` to ensure it doesn't run for over 60 seconds
-    """
-    result_queue = Queue()
-
-    proc = Process(target=lin_kernighan, args=(initial_tour, dist_matrix, result_queue))
-    proc.start()
-
-    time.sleep(58.5)
-    proc.terminate()
-
-    best_tour, best_cost = None, float("inf")
-    while not result_queue.empty():
-        tour, cost = result_queue.get()
-
-        if cost < best_cost:
-            best_tour, best_cost = tour, cost
-
-    return best_tour, best_cost
-
-
 def find_tour(dist_matrix: Matrix) -> tuple[Tour, int]:
     """
-    Returns a random tour on `dist_matrix`
+    Returns a tour on `dist_matrix` and it's length
     """
     initial_tour = find_random_tour(dist_matrix)
 
-    return lk_wrapper(initial_tour, dist_matrix)
+    return lin_kernighan(initial_tour, dist_matrix)

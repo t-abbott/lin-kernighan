@@ -65,7 +65,8 @@ for the best value of $k \in [1..d]$ found.
 
 ## Overview
 
-_todo talk about valid tour at every step_
+> talk about valid tour at every step
+> analogy with kadane's algorithm
 
 Consider a pair tours $T, T'$ with lengths $f(T), f(T')$ such that $f(T') < f(T)$.
 The Lin-Kernighan algorithm aims to transform $T$ into $T'$ by repeatedly replacing
