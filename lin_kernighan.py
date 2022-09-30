@@ -153,18 +153,6 @@ def tour_of_edges(edges: list[Edge]) -> Tour:
     return tour
 
 
-def number_tour(tour: Tour) -> list[int]:
-    """Returns a numbering mapping a city to its position in
-    `tour`.
-    """
-    numbering = [-1] * len(tour)
-
-    for i, city in enumerate(tour):
-        numbering[city] = i + 1
-
-    return numbering
-
-
 # -----
 
 
