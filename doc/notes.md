@@ -9,19 +9,56 @@ header-includes: |
 
 ### The Travelling Salesman problem
 
-The travelling salesman problem is, given a collection of $n$ cities
-and this distances between them,
-to find the shortest path (tour) that visits every city and ends at the
-starting point.
-Usually we model a TSP instance as a fully-connect weighted
+The Travelling Salesman Problem (TSP) is, given a set of cities,
+the problem of finding a shortest path that starts and ends in the same place and
+visits each city exactly once.
+We can model an instance of the TSP as a fully-connected weighted
 graph $G = (V, E)$,
-where the vertices $V$ represent cities, and the edges $E$ represent roads.
-In this framing the solution is the lowest-cost Hamiltonian cycle on $G$.
+where the vertices $V$ represent cities and the edges $E$ represent roads.
+The weight of an edge represents the cost of crossing it (e.g. time taken in minutes),
+and the weight of a tour $T = (e_1, \dots, e_n)$ is the sum of the weights of the edges $e_1, \dots, e_n$.
 
-> real-world framing (history, a salesman)
+In this framing a valid solution $T$ is a Hamiltonian cycle on $G$,
+and a good solution is one which minimises the cost of $T$.
 
-Problem: given a collection of cities and the distances between them,
-find a minimum-length tour that visits each city exactly once.
+In this post we only care about the **metric TSP**,
+which are instances of the Travelling Salesman Problem where the Triangle Equality holds.
+To recap, the Triangle Inequality states that for points $a, b$ and $c$:
+
+\begin{align*}
+d(a, b) + d(b, c) \geq d(a, c)
+\end{align*}
+
+In other words it's always quicker travel to directly between two points
+rather than stopping by a third one along the way.
+This reflects real life, and represents the kind of graph you'd have
+when using the TSP to model a problem like finding the shortest path for a delivery van to take
+when delivering parcels.
+
+> TODO: history of the problem
+
+### Heuristic search algorithms
+
+> should this be talking about random? I can't think of an example of greedy tours
+> producing a crossed edge...
+
+A first approach to finding a tour might be to generate a random sequence
+of cities.
+
+> TODO: make example of random producing crossed over edges
+> mention triangle inequality to justify two opt?
+> this is great: http://www.ams.org/publicoutreach/feature-column/fcarc-tsp
+
+As expected, this doesn't work very well. In the above edge we can see
+the random algorithm produced a tour that crosses over itself a lot. Since
+we're considering the metric
+
+A natural next step is to consider swaps of two edges.
+
+We say the output of such an algorithm is **1-optimal**.
+From every point there is no local swap of one edge we can make to improve
+the length of the tour, since at each point we chose the shortest outgoing edge.
+
 At a glance we can see that brute forcing all possible permutations of cities
 (tours) has time complexity `O(n!)`,
 which quickly becomes impractical as n grows.
@@ -39,8 +76,6 @@ The algorithm applies some transformation to `T` to generate a new solution
 This continues until no improving solution `T'` can be found.
 At this point we can either start again from a new candiate solution,
 or accept `T` as good enough and halt.
-
-### Heruistic search algorithms
 
 > hardness
 > exact solution
@@ -182,6 +217,13 @@ $t_{2i}$ could either be the city to the "left" or "right" of $t_{2i-1}$:
 
 Only one of these is a valid choice, however.
 
+> TODO:
+>
+> - explain why
+> - outline the basic approach presented
+> - show the stackoverflow answer (and explain it?)
+> - link to Helsgaun's paper
+
 ### Psuedocode
 
 The original paper describes the algorithm in terms of `while` loops and `goto` statements,
@@ -191,12 +233,11 @@ which isn't the easiest to understand.
 # type tour = list int
 
 function Lin-Kernighan(initial_tour: tour, n_cities: int) -> tour
-    """Performs an iteration of the lin-kernighan algorithm
+    """Performs a single iteration of the lin-kernighan algorithm
     on the initial tour `initial_tour`.
 
-    To follow the full algorithm (i.e. repeatedly iterate on improved
-    tours `T'`, wrap the whole thing in a while loop or call this function
-    again with it's output from last time.
+    To follow the full algorithm wrap the whole thing in a while loop
+    and repeatedly apply `Lin-Kernighan` to the improved tour `T`.
     """
 
     # Step (1)

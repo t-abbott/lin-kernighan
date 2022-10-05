@@ -1,3 +1,5 @@
+echo "compiling..."
+
 pandoc notes.md \
     --toc \
     --pdf-engine=xelatex \
