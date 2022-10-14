@@ -9,7 +9,7 @@ header-includes: |
 
 ### The Travelling Salesman problem
 
-The Travelling Salesman Problem (TSP) is, given a set of cities,
+The Travelling Salesman Problem (TSP) is, given a set of cities and the distances between them,
 the problem of finding a shortest path that starts and ends in the same place and
 visits each city exactly once.
 We can model an instance of the TSP as a fully-connected weighted
@@ -17,11 +17,18 @@ graph $G = (V, E)$,
 where the vertices $V$ represent cities and the edges $E$ represent roads.
 The weight of an edge represents the cost of crossing it (e.g. time taken in minutes),
 and the weight of a tour $T = (e_1, \dots, e_n)$ is the sum of the weights of the edges $e_1, \dots, e_n$.
+We write $cost(u, v)$ to mean the cost of crossing the edge between cities $(u, v)$
 
 In this framing a valid solution $T$ is a Hamiltonian cycle on $G$,
 and a good solution is one which minimises the cost of $T$.
 
-In this post we only care about the **metric TSP**,
+In this post we only care about **symmetric TSP**,
+which are instances of the Travelling Salesman Problem where
+the $cost(u, v) = cost(v, u)$.
+In other words the distance between two cities is the same
+in both directions.
+
+Another special case of the travelling salesman problem is the **metric TSP**,
 which are instances of the Travelling Salesman Problem where the Triangle Equality holds.
 To recap, the Triangle Inequality states that for points $a, b$ and $c$:
 
@@ -35,52 +42,176 @@ This reflects real life, and represents the kind of graph you'd have
 when using the TSP to model a problem like finding the shortest path for a delivery van to take
 when delivering parcels.
 
-> TODO: history of the problem
-
 ### Heuristic search algorithms
-
-> should this be talking about random? I can't think of an example of greedy tours
-> producing a crossed edge...
 
 A first approach to finding a tour might be to generate a random sequence
 of cities.
 
-> TODO: make example of random producing crossed over edges
-> mention triangle inequality to justify two opt?
-> this is great: http://www.ams.org/publicoutreach/feature-column/fcarc-tsp
+As python pseudocode where we represent cities as integers $0 \dots n-1$
+and model the weighted graph as an $n \times n$ distance matrix,
+the random algorithm might look like:
 
-As expected, this doesn't work very well. In the above edge we can see
-the random algorithm produced a tour that crosses over itself a lot. Since
-we're considering the metric
+```{.python}
+import random
 
-A natural next step is to consider swaps of two edges.
+def random_tour(dist_matrix: Matrix[int]) -> list[int]:
+    n_cities = len(dist_matrix)
+    tour = [i for i in range(n_cities)]
+    random.shuffle(tour)
 
-We say the output of such an algorithm is **1-optimal**.
-From every point there is no local swap of one edge we can make to improve
-the length of the tour, since at each point we chose the shortest outgoing edge.
+    return tour
+```
 
-At a glance we can see that brute forcing all possible permutations of cities
-(tours) has time complexity `O(n!)`,
-which quickly becomes impractical as n grows.
-While there exist algorithms to find an optimal tour in under `O(n!)` time
-_todo cite example_,
+As expected this doesn't work hugely well.
+One way of improving the result is to test if there are any edges in
+the tour we can swap to create a shorter path.
+Essentially, given two edges $(i, i + 1), (j, j + 1) \in T$
+we want to test if replacing them with edges $(i, j + 1), (j, i + 1) \notin T$
+improves the cost of $T$.
+
+\begin{center}
+
+\tikzset{every picture/.style={line width=0.75pt}} %set default line width to 0.75pt
+
+\begin{tikzpicture}[x=0.75pt,y=0.75pt,yscale=-1,xscale=1]
+%uncomment if require: \path (0,300); %set diagram left start at 0, and has height of 300
+
+%Shape: Circle [id:dp8753439834434917]
+\draw (308,233.33) .. controls (308,227.63) and (312.63,223) .. (318.33,223) .. controls (324.04,223) and (328.67,227.63) .. (328.67,233.33) .. controls (328.67,239.04) and (324.04,243.67) .. (318.33,243.67) .. controls (312.63,243.67) and (308,239.04) .. (308,233.33) -- cycle ;
+%Shape: Circle [id:dp7194990599022295]
+\draw (196.67,232.67) .. controls (196.67,226.96) and (201.29,222.33) .. (207,222.33) .. controls (212.71,222.33) and (217.33,226.96) .. (217.33,232.67) .. controls (217.33,238.37) and (212.71,243) .. (207,243) .. controls (201.29,243) and (196.67,238.37) .. (196.67,232.67) -- cycle ;
+%Shape: Circle [id:dp032250614699925295]
+\draw (366,132) .. controls (366,126.29) and (370.63,121.67) .. (376.33,121.67) .. controls (382.04,121.67) and (386.67,126.29) .. (386.67,132) .. controls (386.67,137.71) and (382.04,142.33) .. (376.33,142.33) .. controls (370.63,142.33) and (366,137.71) .. (366,132) -- cycle ;
+%Shape: Circle [id:dp584360070063505]
+\draw (200.67,30.67) .. controls (200.67,24.96) and (205.29,20.33) .. (211,20.33) .. controls (216.71,20.33) and (221.33,24.96) .. (221.33,30.67) .. controls (221.33,36.37) and (216.71,41) .. (211,41) .. controls (205.29,41) and (200.67,36.37) .. (200.67,30.67) -- cycle ;
+%Shape: Circle [id:dp9185346911481373]
+\draw (179.33,118) .. controls (179.33,112.29) and (183.96,107.67) .. (189.67,107.67) .. controls (195.37,107.67) and (200,112.29) .. (200,118) .. controls (200,123.71) and (195.37,128.33) .. (189.67,128.33) .. controls (183.96,128.33) and (179.33,123.71) .. (179.33,118) -- cycle ;
+%Shape: Circle [id:dp05661712467929969]
+\draw (329.17,30.67) .. controls (329.17,24.96) and (333.79,20.33) .. (339.5,20.33) .. controls (345.21,20.33) and (349.83,24.96) .. (349.83,30.67) .. controls (349.83,36.37) and (345.21,41) .. (339.5,41) .. controls (333.79,41) and (329.17,36.37) .. (329.17,30.67) -- cycle ;
+%Straight Lines [id:da3896244321068676]
+\draw (197.5,125.5) -- (311,226.33) ;
+%Straight Lines [id:da8346338793266992]
+\draw (367,137) -- (216,227.5) ;
+%Straight Lines [id:da6626982923525828]
+\draw (308,233.33) -- (217.33,232.67) ;
+%Straight Lines [id:da7274809831536571]
+\draw (207,40) -- (189.67,107.67) ;
+%Straight Lines [id:da6253243414667304]
+\draw (221.33,30.67) -- (329.17,30.67) ;
+%Straight Lines [id:da9129270581900137]
+\draw (345.5,38.5) -- (376.33,121.67) ;
+%Straight Lines [id:da659948813152925]
+\draw [dash pattern={on 4.5pt off 4.5pt}] (189.67,128.33) -- (204.5,223) ;
+%Straight Lines [id:da41668161777667057]
+\draw [dash pattern={on 4.5pt off 4.5pt}] (371,141) -- (324.5,225.5) ;
+
+% Text Node
+\draw (187,109) node [anchor=north west][inner sep=0.75pt] [align=left] {{\fontfamily{pcr}\selectfont {\scriptsize i}}};
+% Text Node
+\draw (199,223) node [anchor=north west] [inner sep=0.75pt] [align=left] {{\fontfamily{pcr}\selectfont {\scriptsize j+1}}};
+% Text Node
+\draw (374.5,122) node [anchor=north west][inner sep=0.75pt] [align=left] {{\fontfamily{pcr}\selectfont {\scriptsize j}}};
+% Text Node
+\draw (311,223) node [anchor=north west][inner sep=0.75pt] [align=left] {{\fontfamily{pcr}\selectfont {\scriptsize i+1}}};
+
+\end{tikzpicture}
+\end{center}
+
+In the above example we can see that swapping $(i, i+1), (j, j+1)$ with $(i, j+1), (j, i+1)$
+corresponds to reversing the subtour between $i$ and $j$.
+After reversal the first node $i+1$ of the subtour becomes the last,
+and will be adjacent to $j$.
+Similarly, the last node $j+1$ in the subtour becomes the first,
+and will be adjacent to $i$.
+
+If we do this for every pair of edges in $T$ then we say the resulting
+tour is two-optimal,
+meaning that there are no pairs of two edges that we can swap to
+improve the length of the tour.
+
+```{.python}
+def tour_cost(tour: list[int], dist_matrix: Matrix[int]) -> int:
+    ...
+
+def swap_subtour(tour: list[int], from_city: int, to_city: int) -> list[int]:
+    ...
+
+def two_opt(dist_matrix: Matrix[int]) -> tuple[list[int], int]:
+    n_cities = len(dist_matrix)
+    swapped = True
+
+    # create an initial tour to optimise
+    tour, current_cost = random_tour(dist_matrix)
+
+    # improve `tour` by swapping edges until there are none
+    # left to swap (it is two-optimal)
+    while swapped:
+        swapped = False
+
+        for i in range(n_cities - 2):
+            for j in range(i+1, n_cities - 1):
+                # attempt to improve `tour` by swapping `(i, i+1), (j, j+1)` with
+                # with `(i,j+1), (j,i+1)`. Reversing the subtour between `i` and `j`
+                # does this implicitly
+                new_tour = swap_subtour(tour, i, j)
+                new_cost = tour_cost(new_tour, dist_matrix)
+
+                if new_cost < current_cost:
+                    tour = new_tour
+                    current_cost = new_cost
+                    swapped = True
+                    break
+
+    return tour, current_cost
+```
+
+A natural next step is to extend our two-edge swapping algorithm to three or more edges,
+and as the number of swaps we consider increases the quality of our tours improves.
+
+Unfortunately the time complexity of our algorithm increases too.
+From the above code we can see that each iteration of two-opt takes **at least** $O(n^2)$,
+since we compare each edge in the tour with all other edges in the graph
+(of which there are $\frac{n(n-1)}{n} = O(n^2)$).
+Reversing the subtour will probably take $O(n)$ time too\footnotemark,
+and every edge we remove may introduce more places to swap such that
+we need to loop over the tour many times until the solution converges to
+a local optimum.
+
+\footnotetext{good choice of tour data stucture will improve this - e.g. using a two-level tree}
+
+At the very least, as we increase the number of edge swaps we consider in the core loop
+of our algorithm, $O(n^2)$ for \textsc{2Opt} turns into $O(n^3)$ for \textsc{3Opt},
+$O(n^4)$ for \textsc{4Opt},
+and so on until we reach $O(n^n)$ (or $O(n!)$) for \textsc{NOpt}.
+Since the n-optimal algorithm gives us a tour where we can't rearrange any cities
+to improve it's cost it should return the optimal solution to a TSP,
+but this comes at the cost of brute-forcing all possible permutations of cities,
+which has time complexity $O(n!)$.
+
+While there exist exact algorithms to find an optimal tour (Dantzig-Fulkerson-Johnson & cutting planes)
 these algorithms are still relatively slow _read: not polynomial_.
 
 Instead we attempt to find a solution by using **heuristic** algorithms.
 A heuristic algorithm finds an approximate solution by
 trading optimality (does it find the best solution?)
 and completeness (can the algorithm generate all solutions?) for speed.
-A heuristic algorithm uses a heuristic function `f` to evalutate possible solutions `T`.
-The algorithm applies some transformation to `T` to generate a new solution
-`T'` such that `f(T') < f(T)`.
-This continues until no improving solution `T'` can be found.
+A heuristic algorithm uses a heuristic function $f$ to evalutate possible solutions $T$.
+The algorithm repeatedly applies some transformation to $T$ to generate a new solution
+$T'$ such that $f(T') < f(T)$.
+This continues until no improving solution $T'$ can be found.
 At this point we can either start again from a new candiate solution,
-or accept `T` as good enough and halt.
+or accept $T$ as good enough and halt.
 
-> hardness
-> exact solution
-> definition of a heuristic algorithm
-> high-level description and comparison to other heuristic algorithms
+It is likely that $f$ has many minima,
+and since they don't explore the entire solution space
+many heuristic algorithms use randomness to branch away from a current solution
+to find new, deeper minimums.
+Such branches are an imporant part of many popular heuristic algorithms like
+Ant Colony Optimisation, Simulated Annealing, and the Genetic Algorithm.
+One of the reasons the Lin-Kernighan algorithm is interesting (to me) is that
+it doesn't rely on randomness to escape local minima.
+Instead the heuristic function $f$ allows a finite amount of "bad" moves
+that worsen $f(T)$ in the hope that the resulting moves lead to new local minima.
 
 The spirit of heuric-based algorithms for combinatorial optimisation problems is:
 
@@ -99,9 +230,6 @@ The tour $T'$ that we produce is the tour obtained by applying the $k$-opt move
 for the best value of $k \in [1..d]$ found.
 
 ## Overview
-
-> talk about valid tour at every step
-> analogy with kadane's algorithm
 
 Consider a pair tours $T, T'$ with lengths $f(T), f(T')$ such that $f(T') < f(T)$.
 The Lin-Kernighan algorithm aims to transform $T$ into $T'$ by repeatedly replacing
