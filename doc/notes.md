@@ -173,7 +173,7 @@ From the above code we can see that each iteration of two-opt takes **at least**
 since we compare each edge in the tour with all other edges in the graph
 (of which there are $\frac{n(n-1)}{n} = O(n^2)$).
 Reversing the subtour will probably take $O(n)$ time too\footnotemark,
-and every edge we remove may introduce more places to swap such that
+and every edge we remove may introduce more potential edge swaps such that
 we need to loop over the tour many times until the solution converges to
 a local optimum.
 
@@ -184,7 +184,8 @@ of our algorithm, $O(n^2)$ for \textsc{2Opt} turns into $O(n^3)$ for \textsc{3Op
 $O(n^4)$ for \textsc{4Opt},
 and so on until we reach $O(n^n)$ (or $O(n!)$) for \textsc{NOpt}.
 Since the n-optimal algorithm gives us a tour where we can't rearrange any cities
-to improve it's cost it should return the optimal solution to a TSP,
+to improve its cost
+it should return the optimal solution to a TSP,
 but this comes at the cost of brute-forcing all possible permutations of cities,
 which has time complexity $O(n!)$.
 
@@ -204,34 +205,33 @@ or accept $T$ as good enough and halt.
 
 It is likely that $f$ has many minima,
 and since they don't explore the entire solution space
-many heuristic algorithms use randomness to branch away from a current solution
-to find new, deeper minimums.
+many heuristic algorithms use randomness to branch away from a current solution to find
+new, deeper local minima.
 Such branches are an imporant part of many popular heuristic algorithms like
 Ant Colony Optimisation, Simulated Annealing, and the Genetic Algorithm.
-One of the reasons the Lin-Kernighan algorithm is interesting (to me) is that
-it doesn't rely on randomness to escape local minima.
+One of the reasons the Lin-Kernighan algorithm is interesting to me is that
+it doesn't rely on randomness to escape a local minimum.
 Instead the heuristic function $f$ allows a finite amount of "bad" moves
 that worsen $f(T)$ in the hope that the resulting moves lead to new local minima.
 
-The spirit of heuric-based algorithms for combinatorial optimisation problems is:
+So, a heuristic algoritm proceeds by:
 
-1. Start with an arbitrary (probably random) feasible solution $T$
+1. Starting with an arbitrary (probably random) feasible solution $T$
 2. Attempt to find an improved solution $T'$ by transforming $T$
 3. If an improved solution is found (i.e. $f(T') < f(T)$), let $T = T'$ and repeat 2.
 4. If no improved solution can be found then $T$ is a locally optimal solution.
 
 Repeat the above from step 1 until you run out of time or find a statisfactory solution.
-In the case of Lin-Kernighan the transformation $T \mapsto T'$ is a k-opt move
+In the case of Lin-Kernighan the transformation $T \mapsto T'$ is a single k-opt move
 and the objective function $f$ is the cost of the tour.
-
-Lin-Kernighan works by repeatedly applying $k \in [1..d]$-opt moves to a candidate tour
-until no swap can be found that doesn't increase the cost of the tour.
-The tour $T'$ that we produce is the tour obtained by applying the $k$-opt move
-for the best value of $k \in [1..d]$ found.
+Lin-Kernighan works by repeatedly applying $k \in 1,2,...,d$-opt moves to a candidate tour
+until no swap can be found that increases the cost of the tour.
+We start with a 2-opt move an extend it with extra edges,
+and evenutally apply the k-opt move that resulted in the best tour for $k \in 1..d$.
 
 ## Overview
 
-Consider a pair tours $T, T'$ with lengths $f(T), f(T')$ such that $f(T') < f(T)$.
+Consider a pair tours $T, T'$ with costs $f(T), f(T')$ such that $f(T') < f(T)$.
 The Lin-Kernighan algorithm aims to transform $T$ into $T'$ by repeatedly replacing
 edges $X = \{x_1, x_2, \dots, x_k \}$ in $T$ with edges
 $Y = \{y_1, y_2, \dots, y_k\}$\footnotemark not in $T$.
@@ -241,22 +241,16 @@ $Y = \{y_1, y_2, \dots, y_k\}$\footnotemark not in $T$.
 In order to decide if a swap is good we need some measure of improvement.
 Let the lengths of $x_i, y_i$ be $|x_i|, |y_i|$ respectively,
 and define $g_i = |x_i| - |y_i|$.
-The value $g_i$ represents the gain made by swap $i$;
-we define the improvement of one tour over the other as $G_i = \sum^{k}_{i} g_i = f(T) - f(T')$.
+The value $g_i$ represents the gain made by swap $i$,
+and we define the improvement of one tour over the other as $G_i = \sum^{k}_{i} g_i = f(T) - f(T')$.
 A key part of the Lin-Kernighan algorithm is that $g_i$ can be negative as long as the overall
 gain $G_i$ is greater than 0.
 This allows Lin-Kernighan to avoid getting stuck in local minima by moving "uphill":
 we permit a bad move that might allow us to find new minima as long as the bad move
 doesn't ruin our tour.
-Being able to escape local minima is an important part of most TSP algorithms;
-other algorithms like \textsc{Ant-Colony} or \textsc{Simulated-Annealing} use randomness
-to do so.
 
-_todo compare X, Y to tabu lists (they do the same but more)_
-
-## Ejection chains
-
-todo
+The sequence of swaps $X = \{x_1, x_2, \dots x_d \}$ with $Y = \{y_1, y_2, \dots, y_d\}$
+is sometimes called an ejection chain.
 
 ## Basic algorithm
 
@@ -309,23 +303,22 @@ If $G^*_{i - 1} + g^*_i > G^*$, set $G^* = G_{i-1} + g^*_i$ and let $d = i$.
 6.  If $G^* = 0$ we backtrack to progressively farther back points in the algorithm
     to see if making different choices of edge/city leads to better results.
 
-        a) Repeat step 4, try different choices of $y_2$
-        in increasing length (or whatever metric you're using to select candidate edges)
+    a) Repeat step 4, try different choices of $y_2$
+    in increasing length (or whatever metric you're using to select candidate edges)
 
-        b) If 6a doesn't work, try different choices of $y_1$
+    b) If 6a doesn't work, try different choices of $y_1$
 
-        c) Else try different choices of $x_1$
+    c) Else try different choices of $x_1$
 
-        d) Else try different choices of $t_1$
+    d) Else try different choices of $t_1$
 
 We backtrack until we either see improvement or run out of new edges to try,
 though for the sake of reducing complexity only backtrack on levels 1 and 2.
 
-Written like this backtracking looks like a hassle, but in practice using a `for` loop
-lets you try multiple choices of nodes whith ease,
-while also being the most natural way to write parts of the algorithm.
-
 ### Comments
+
+Written like this backtracking looks like a pain,
+but in practice the `goto`s are equivalent to a `for` loop.
 
 #### Step 4
 
@@ -343,19 +336,28 @@ $t_{2i}$ could either be the city to the "left" or "right" of $t_{2i-1}$:
 \end{tikzpicture}
 \end{center}
 
-Only one of these is a valid choice, however.
+Only one of these is a valid, however.
+Identifying which city $t_{2i}$ is the correct choice is an important
+part of the algorithm.
+If you choose $t_{2i}$ on the subtour between $t_1, t_{2i-1}$ then
+$y^*$ implicitly creates a disonneced cycle $t_1, t_{2i}, \dots, t_n$.
 
-> TODO:
->
-> - explain why
-> - outline the basic approach presented
-> - show the stackoverflow answer (and explain it?)
-> - link to Helsgaun's paper
+> TODO: diagram
+
+In practice I did it by attempting to construct a tour from both choices
+of $x_i = (t_{2i-1}, t_{2i}), y_i^* = (t_{2i}, t_1)$ and picking the one
+that succeeded.
+
+> TODO: code
+
+[Paul Rubin](https://rubin.msu.domains/) suggested a nice algorithm for
+identifying the correct $t_{2i}$ in a comment on [this](https://or.stackexchange.com/questions/8268/lin-kernighan-tsp-edge-choice) stackexchange post.
+Keld Helsgaun [also chimed in](https://or.stackexchange.com/a/8299) to point to a section in one of his papers
+that describes how to test if a k-opt move is valid in $O(k \log k)$ time\footnotemark.
+
+\footnotetext{section 5.3 of "General k-opt submoves for the Lin–Kernighan TSP heuristic"}
 
 ### Psuedocode
-
-The original paper describes the algorithm in terms of `while` loops and `goto` statements,
-which isn't the easiest to understand.
 
 ```{.python .numberLines}
 # type tour = list int
@@ -453,72 +455,3 @@ function Lin-Kernighan(initial_tour: tour, n_cities: int) -> tour
 
     return tour
 ```
-
-## Enhancements
-
-### Candidate list
-
-todo compute candidate lists beforehand and loop on/choose from them
-
-### "Don't look" bits
-
-### Memoisation
-
-### Alpha-nearness
-
-### Bit arrays
-
-This isn't a TSP/LK-specific optimisation.
-How to best implement it in python:
-
-- an array of bools?
-- an integer
-  What about an array of 8-bit integers? TODO read the code for [BitVector](https://engineering.purdue.edu/kak/dist/BitVector-3.5.0.html)
-
----
-
-## old
-
-Problem: given a collection of cities and the distances between them,
-find a minimum-length tour that visits each city exactly once.
-At a glance we can see that brute forcing all possible permutations of cities
-(tours) has time complexity `O(n!)`,
-which quickly becomes impractical as n grows.
-While there exist algorithms to find an optimal tour in under `O(n!)` time
-_todo cite example_,
-these algorithms are still relatively slow _read: not polynomial_.
-
-Instead we attempt to find a solution by using **heuristic** algorithms.
-A heuristic algorithm finds an approximate solution by
-trading optimality (does it find the best solution?)
-and completeness (can the algorithm generate all solutions?) for speed.
-A heuristic algorithm uses a heuristic function `f` to evalutate possible solutions `T`.
-The algorithm applies some transformation to `T` to generate a new solution
-`T'` such that `f(T') < f(T)`.
-This continues until no improving solution `T'` can be found.
-At this point we can either start again from a new candiate solution,
-or accept `T` as good enough and halt.
-
-In the case of the travelling salesman problem
-the heuristic function `f` that we are trying to minimise is the length of a tour.
-Our heuristic algorithm should proceed along the lines of:
-
-1. Generate an initial tour `T`
-2. Attempt to create an improved tour `T'` from `T`
-3. If `T'` improves `T` (i.e `f(T') < (T)`), let `T = T'` and go to 2.
-4. Otherwise we can't improve `T`. We can either go back to step 1 or declare `T` as
-   good enough and halt.
-
-At step 4 we have reached a local minimum.
-_todo visualise with a plane_
-To improve our solution we need to find a new tour to restart
-the algorithm from in the hopes that it leads to a better minimum.
-It follows that an important part of any heuristic algorithm is how it escapes
-local minima.
-Many algorithms do this by incorporating an element of randomness into
-the decision process
-_todo elaborate_.
-The Lin-Kernihan algorithm is interesting in that it doesn't do this,
-and instead allows some "bad" moves (with regards to `f`)
-in the hope that they lead us uphill into a state where we
-can find a new, deeper minimum.
