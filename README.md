@@ -1,6 +1,6 @@
-## TODO
-- clean up code
-- finish `notes.md`
-- literate jupyter script? https://nbviewer.org/url/norvig.com/ipython/TSP.ipynb
+# Lin-Kernihan TSP
 
+- `doc/notes.md`/`doc/output.pdf` - notes on the algorithm
+- `doc/papers/` - good papers on the algorithm
+- `lin_kernighan.py` - a python implementation of the algorithm
 
